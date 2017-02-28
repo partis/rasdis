@@ -5,10 +5,13 @@ import (
   "github.com/golang/glog"
   "fmt"
   "errors"
-  "encoding/json"
+  "strconv"
 )
 
-func dealWithTags(template *SwaggerTemplate, contentPolicy contentPolicy, policyType string) error  {
+var config Config
+var template SwaggerTemplate
+
+func dealWithTags(contentPolicy contentPolicy, policyType string) error  {
   if strings.Contains(contentPolicy.Name, "_" + policyType + "_content_policy_") {
     tags := template.Tags
 
@@ -27,77 +30,73 @@ func dealWithTags(template *SwaggerTemplate, contentPolicy contentPolicy, policy
   }
 }
 
-func dealWithContentPolicyList(template *SwaggerTemplate, policyList policyList, policyType string, config Config) {
+func dealWithContentPolicyList(policyList policyList, policyType string) {
   //paths := template.Paths
   
   for i := range policyList.Policy {
     contentPolicy := getContentPolicy(policyList.Policy[i].Name, "json", config)
-    dealWithContentPolicy(template, contentPolicy, policyType, config)
+    dealWithContentPolicy(contentPolicy, policyType)
     glog.Flush()
   }
 }
 
-func dealWithContentPolicy(template *SwaggerTemplate, contentPolicy contentPolicy, policyType string, config Config) {
-  err := dealWithTags(template, contentPolicy, policyType)
+func dealWithContentPolicy(contentPolicy contentPolicy, policyType string) {
+  err := dealWithTags(contentPolicy, policyType)
 
   if err == nil {
     virtualDirectoryList := getVirtualDirectoryList(contentPolicy.Name, "json", config)
       
-    dealWithVirtualDirectoryList(template, &contentPolicy, virtualDirectoryList, policyType, config)
+    dealWithVirtualDirectoryList(&contentPolicy, virtualDirectoryList, policyType)
   }
 }
 
-func dealWithVirtualDirectoryList(template *SwaggerTemplate, contentPolicy *contentPolicy, virtualDirectoryList policyList, policyType string, config Config) {
+func dealWithVirtualDirectoryList(contentPolicy *contentPolicy, virtualDirectoryList policyList, policyType string) {
  for j := range virtualDirectoryList.Policy {
 
     virtualDirectory := getVirtualDirectory(contentPolicy.Name, virtualDirectoryList.Policy[j].Name, "json", config)
   
-    dealWithVirtualDirectory(template, contentPolicy, &virtualDirectory, policyType, config)
+    dealWithVirtualDirectory(contentPolicy, &virtualDirectory, policyType)
     glog.Flush()
   }
 }
 
-func dealWithVirtualDirectory(template *SwaggerTemplate, contentPolicy *contentPolicy, virtualDirectory *virtualDirectory, policyType string, config Config) {
+func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *virtualDirectory, policyType string) {
   path := new(PathStruct)
   verb := new(VerbStruct)
-  definition := new(Definition)
+ // definition := new(Definition)
   
-  listenerPolicy := getListenerPolicy(getNetworkProtocol(virtualDirectory.ListenerPolicy), virtualDirectory.ListenerPolicy, config)
+  listenerType := getNetworkProtocol(virtualDirectory.ListenerPolicy)
+  listenerPolicy := getListenerPolicy(listenerType, virtualDirectory.ListenerPolicy, config)
 
   contentPolicySplit := strings.Split(contentPolicy.Name, "_" + policyType + "_content_policy_") 
+  virtualDirectorySplit := strings.Split(virtualDirectory.Name, "_virtual_directory_") 
+  parameterDocument, parameterDocExists := getDocument(virtualDirectorySplit[0], virtualDirectorySplit[1], "parameters", config)
 
-  //grab any documents for this verb
-  document, parameterName, docExists := getDocument(contentPolicySplit[0], contentPolicySplit[1], config)
+  if parameterDocExists {
+   glog.V(1).Info("Parameter doc is: " + parameterDocument)
+   verb.Parameters = parameterDocument 
 
-    glog.V(1).Info(docExists)
-    if docExists {
-      definition.Type = "object"
-      definition.Properties = document
-      definition.Xml.Name = contentPolicySplit[1]
-      template.Definitions.definitions = append(template.Definitions.definitions, *definition)
+   checkForDefinitions(virtualDirectorySplit[0], parameterDocument)
+  //grab any documents for this parameter
+  //document, parameterName, docExists := getDocument(virtualDirectorySplit[0], virtualDirectorySplit[1], config)
 
-      parameters := new(VerbParameters)
+    //glog.V(1).Info(docExists)
+    //if docExists {
+     // definition.Type = "object"
+      //definition.Properties = document
+      //definition.Xml.Name = contentPolicySplit[1]
+      //template.Definitions.definitions = append(template.Definitions.definitions, *definition)
 
-      parameters.In = "body"
-      parameters.Name = parameterName
-      parameters.Description = ""
+      //parameters := new(VerbParameters)
 
-      listenerPort,err := json.Marshal(listenerPolicy["port"])
-      if err != nil {
-        glog.Warning("Unable to parse port from listener policy setting to 80")
-        listenerPort = []byte("80")
-      }
-      fmt.Println("Port from listenerPolicy is : " + string(listenerPort))
-      parameters.Port = string(listenerPort)
-      parameters.Required = false
-      parameters.Schema.Ref = "#/definitions/" + parameterName 
+      //parameters.In = "body"
+      //parameters.Name = parameterName
+      //parameters.Description = ""
 
-      verb.Parameters = append(verb.Parameters, * parameters)
-    } else {
-      parameters := new(VerbParameters)
-      parameters.Port = "20001"
+      //parameters.Required = false
+      //parameters.Schema.Ref = "#/definitions/" + parameterName 
 
-      verb.Parameters = append(verb.Parameters, * parameters)
+      //verb.Parameters = append(verb.Parameters, * parameters)
     } 
     
     verb.Tags = append(verb.Tags, contentPolicySplit[1])
@@ -115,6 +114,20 @@ func dealWithVirtualDirectory(template *SwaggerTemplate, contentPolicy *contentP
       verb.Consumes = []string{"application/xml"}
       verb.Produces = []string{"application/xml"}
     }
+   
+    //listenerPort,err := json.Marshal(listenerPolicy["port"])
+    listenerPort := listenerPolicy["port"]
+    //if err != nil {
+    //  glog.Warning("Unable to parse port from listener policy setting to 80")
+    //  listenerPort = []byte("80")
+    //}
+    fmt.Println("Port from listenerPolicy is : " + string(listenerPort))
+    port, err := strconv.Atoi(removeQuotes(string(listenerPort)))
+    if err != nil {
+      glog.Warning("Unable to convert port string " + removeQuotes(string(listenerPort)) + " to a number")
+    }
+    verb.Connection.Port = port
+    verb.Connection.Type = listenerType
 
     glog.V(2).Info(verb)
     path.verbs = append(path.verbs, *verb)
@@ -123,13 +136,37 @@ func dealWithVirtualDirectory(template *SwaggerTemplate, contentPolicy *contentP
   }
 }
 
+func checkForDefinitions(projectName string, checkInHere string) {
+  for strings.Contains(checkInHere, "#/definition/") {
+    checkInHere = strings.SplitAfterN(checkInHere, "#/definition/", 2)[1]
+    definitionName := strings.SplitAfterN(checkInHere, "\"", 2)[0]
+    grabDefinitionDoc(projectName, definitionName)
+  }
+}
+
+func grabDefinitionDoc(projectName string, definitionName string) {
+  definition := new(Definition)
+
+  definitionDocument, docExists := getDocument(projectName, definitionName, "defintion", config)
+
+    glog.V(1).Info(docExists)
+    if docExists {
+      definition.Type = "object"
+      definition.Properties = definitionDocument
+      definition.Xml.Name = definitionName
+      template.Definitions.definitions = append(template.Definitions.definitions, *definition)
+    }
+
+    checkForDefinitions(definitionDocument, projectName)
+}
+
 func rasdis(user string) string {
 
   fmt.Println("Authorised user is: " + user)
-  template := getSwaggerTemplate()
+  template = getSwaggerTemplate()
   policyType := "json"
 
-  config := ReadConfig("rasdis.cfg")
+  config = ReadConfig("rasdis.cfg")
 
   glog.V(1).Info("forum url from config is: " + config.ForumURL)
 
@@ -138,14 +175,14 @@ func rasdis(user string) string {
   }
   policyList := getContentPolicyList(policyType, config)  
   
-  dealWithContentPolicyList(&template, policyList, policyType, config)
+  dealWithContentPolicyList(policyList, policyType)
 
   glog.V(2).Info(template)
-  glog.V(2).Info(toJson(&template))
+  glog.V(2).Info(swaggerToJson(&template))
 
   glog.Flush()
 
-  return toJson(&template)
+  return swaggerToJson(&template)
 }
 
 func getNetworkProtocol(networkName string) string {

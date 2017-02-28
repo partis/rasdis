@@ -9,6 +9,7 @@ import (
   "fmt"
   "crypto/tls"
   "strings"
+  "bytes"
 )
 
 func callRest(baseUrl string, config Config) []byte {
@@ -143,11 +144,19 @@ func getListenerPolicy(listenerType string, listenerName string, config Config) 
   return policy
 }
 
-func getDocument(projectDetails string, description string, config Config) (Document string, parameterName string, docExists bool) {
+func getDocument(projectDetails string, description string, docType string, config Config) (Document string, docExists bool) {
   var inter interface{}
-  url := "/restApi/v1.0/policies/documents/" + projectDetails + "_document_policy_" + description
+  url := "/restApi/v1.0/policies/documents/" + projectDetails + "_document_policy_" + docType + "_" + description
   
   resp := callRest(url, config)
+
+  buffer := new(bytes.Buffer)
+  err := json.Compact(buffer, resp)
+  if err != nil {
+    glog.Warning("Unable to remove whitespace from JSON")
+  }
+
+  resp = buffer.Bytes()
  
   glog.V(2).Info(string(resp)) 
   if string(resp) != "" {
@@ -166,7 +175,7 @@ func getDocument(projectDetails string, description string, config Config) (Docu
       //if err != nil {
       //  log.Fatal(err)
       //}
-    
+
       glog.V(2).Info(jsonDoc)
       i := 0
 
@@ -176,14 +185,14 @@ func getDocument(projectDetails string, description string, config Config) (Docu
         i++
       }
     
-      parameterName = keys[0]
       glog.V(2).Info(Document)
      
-      return Document, parameterName, docExists
+      return Document, docExists
     } else {
       glog.Warning("Your document isn't valid JSON, please check and upload valid JSON to create your model definition")
     }
   }
 
-  return "", "", false
+  return "", false
 }
+

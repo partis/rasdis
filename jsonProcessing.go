@@ -31,8 +31,10 @@ func toJson(template interface{}) string {
 
 func isJson(s string) (map[string]interface{}, bool) {
   var js map[string]interface{}
+
+  err := json.Unmarshal([]byte(s), &js)
   
-  return js, json.Unmarshal([]byte(s), &js) == nil
+  return js, err == nil
 }
 
 func (def *DefinitionStruct) MarshalJSON() ([]byte, error) {
@@ -94,7 +96,10 @@ func (pss *PathsStruct) MarshalJSON() ([]byte, error) {
 
     for j := range pss.paths[i].verbs {
       jsonBytes = append(jsonBytes, []byte("\"" + verb + "\":")...)
-      bytes, err := json.Marshal(pss.paths[i].verbs[j])
+      glog.V(2).Info("Marshalling a verb now")
+      var verb VerbStruct
+      verb = pss.paths[i].verbs[j]
+      bytes, err := json.Marshal(&verb)
       if err != nil {
         glog.V(2).Infof("Unable to marshal verb: %s", pss.paths[i].verbs[j])
         return nil, err
@@ -111,6 +116,60 @@ func (pss *PathsStruct) MarshalJSON() ([]byte, error) {
   jsonBytes = bytes.TrimSuffix(jsonBytes, comma)
   jsonBytes = append(jsonBytes, []byte("}")...)
   glog.V(2).Info("json bytes after all paths: %s", string(jsonBytes))
+  return jsonBytes, nil
+}
+
+func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
+  glog.V(2).Info("Inside marshal for verb struct")
+  var jsonBytes []byte = []byte("")
+
+  tag, err := json.Marshal(ver.Tags)
+  summary, err := json.Marshal(ver.Summary)
+  description, err := json.Marshal(ver.Description)
+  operationId, err := json.Marshal(ver.OperationID)
+  consumes, err := json.Marshal(ver.Consumes)
+  produces, err := json.Marshal(ver.Produces)
+  connection, err := json.Marshal(ver.Connection)
+  parameters, err := json.Marshal(ver.Parameters)
+
+  if bytes.HasPrefix(parameters, []byte("\"")) {
+    parameters = bytes.TrimPrefix(parameters, []byte("\""))
+  }
+  if bytes.HasSuffix(parameters, []byte("\"")) {
+    parameters = bytes.TrimSuffix(parameters, []byte("\""))
+  }
+
+  parameters = bytes.Replace(parameters, []byte("\\\""), []byte("\""), -1)
+
+  if err != nil {
+    glog.Error(err)
+    return []byte(""), err
+  }
+
+  jsonBytes = append(jsonBytes, []byte("{\"tags\":")...)
+  jsonBytes = append(jsonBytes, tag...)
+  jsonBytes = append(jsonBytes, []byte(",\"summary\":")...)
+  jsonBytes = append(jsonBytes, summary...)
+  jsonBytes = append(jsonBytes, []byte(",\"description\":")...)
+  jsonBytes = append(jsonBytes, description...)
+  jsonBytes = append(jsonBytes, []byte(",\"operatonId\":")...)
+  jsonBytes = append(jsonBytes, operationId...)
+  jsonBytes = append(jsonBytes, []byte(",\"consumes\":")...)
+  jsonBytes = append(jsonBytes, consumes...)
+  jsonBytes = append(jsonBytes, []byte(",\"produces\":")...)
+  jsonBytes = append(jsonBytes, produces...)
+  jsonBytes = append(jsonBytes, []byte(",\"connection\":")...)
+  jsonBytes = append(jsonBytes, connection...)
+  jsonBytes = append(jsonBytes, []byte(",\"parameters\":[")...)
+  if string(parameters) != "" {
+    jsonBytes = append(jsonBytes, parameters...)
+    jsonBytes = append(jsonBytes, []byte("]}")...)
+  } else {
+    jsonBytes = append(jsonBytes, []byte("]}")...)
+  }
+
+  glog.V(2).Info("verb jsonBytes is: " + string(jsonBytes))
+
   return jsonBytes, nil
 }
 
