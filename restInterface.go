@@ -169,6 +169,12 @@ func getDocument(projectDetails string, description string, docType string, conf
 
     Document = removeQuotes(Document)
 
+    if docType == "parameters" {
+      Document = "[" + Document + "]"
+    }
+
+    glog.V(2).Info("Document retrieved from forum is: " + Document)
+
     if jsonDoc, ok := isJson(Document); ok {
       //var jsonDoc map[string]interface{}
       //err = json.Unmarshal([]byte(Document), &jsonDoc)

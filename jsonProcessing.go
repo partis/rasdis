@@ -119,6 +119,7 @@ func (pss *PathsStruct) MarshalJSON() ([]byte, error) {
   return jsonBytes, nil
 }
 
+/**
 func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
   glog.V(2).Info("Inside marshal for verb struct")
   var jsonBytes []byte = []byte("")
@@ -171,6 +172,141 @@ func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
   glog.V(2).Info("verb jsonBytes is: " + string(jsonBytes))
 
   return jsonBytes, nil
+}**/
+
+func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
+  var jsonBytes []byte
+  comma := []byte(",")
+
+  jsonBytes = append(jsonBytes, []byte("{")...)
+
+  //Tags
+  tags, err := json.Marshal(ver.Tags)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"tags\":")...)
+  jsonBytes = append(jsonBytes, tags...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //Summary
+  summary, err := json.Marshal(ver.Summary)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"summary\":")...)
+  jsonBytes = append(jsonBytes, summary...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //Description
+  description, err := json.Marshal(ver.Description)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"description\":")...)
+  jsonBytes = append(jsonBytes, description...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //OperationID
+  operationId, err := json.Marshal(ver.OperationID)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"operationId\":")...)
+  jsonBytes = append(jsonBytes, operationId...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //Consumes
+  consumes, err := json.Marshal(ver.Consumes)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"consumes\":")...)
+  jsonBytes = append(jsonBytes, consumes...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //Produces
+  produces, err := json.Marshal(ver.Produces)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"produces\":")...)
+  jsonBytes = append(jsonBytes, produces...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //Connection
+  connection, err := json.Marshal(ver.Connection)
+  if err != nil {
+    glog.Error(err)
+  }
+  jsonBytes = append(jsonBytes, []byte("\"connection\":")...)
+  jsonBytes = append(jsonBytes, connection...)
+  jsonBytes = append(jsonBytes, comma...)
+
+  //Parameters
+  jsonBytes = append(jsonBytes, []byte("\"parameters\":[")...)
+  parameters, err := json.Marshal(ver.Parameters)
+  if err != nil {
+    glog.Error(err)
+  }
+  parameters = bytes.Replace(parameters, []byte("\\\""), []byte("\""), -1)
+  parameters = []byte(removeQuotes(string(parameters)))
+  jsonBytes = append(jsonBytes, parameters...)
+
+  jsonBytes = append(jsonBytes, []byte("]")...)
+
+
+  jsonBytes = append(jsonBytes, []byte("}")...)
+  glog.V(2).Info("json bytes for verb struct: %s", string(jsonBytes))
+  return jsonBytes, nil
+}
+
+func (ver *VerbStruct) UnmarshalJSON(b []byte) (err error) {
+  s := strings.Trim(string(b), "\"")
+  if s == "null" {
+    glog.Warning("bytes are null, something isn't right")
+  }
+
+  glog.V(2).Info(s)
+  var verb map[string]json.RawMessage
+  json.Unmarshal(b, &verb)
+
+  var tags []string
+  json.Unmarshal(verb["tags"], &tags)
+  //ver.Tags = removeQuotes(string(verb["tags"]))
+  ver.Tags = tags
+  ver.Summary = removeQuotes(string(verb["summary"]))
+  ver.Description = removeQuotes(string(verb["description"]))
+  ver.OperationID = removeQuotes(string(verb["operationId"]))
+
+  var consumes []string
+  json.Unmarshal(verb["consumes"], &consumes)
+  //ver.Consumes = removeQuotes(string(verb["consumes"]))
+  ver.Consumes = consumes
+
+  var produces []string
+  json.Unmarshal(verb["produces"], &produces)
+  //ver.Produces = removeQuotes(string(verb["produces"]))
+  ver.Produces = produces
+
+  var conn ConnectionStruct
+  json.Unmarshal(verb["connection"], &conn)
+
+  ver.Connection = conn
+
+  glog.V(1).Info("Parameters from bytes in unmarshal: " + string(verb["parameters"]))
+
+  params := removeWhiteSpace(string(verb["parameters"]))
+
+  params = removeQuotes(params)
+
+  params = strings.TrimPrefix(params, "[")
+
+  ver.Parameters = strings.TrimSuffix(params, "]")
+
+  glog.V(1).Info("Parameters from verbStruct in unmarshal: " + ver.Parameters)
+
+  return
 }
 
 func getPathAndVerbFromJson(tag string, operationID string) (path string, verb string) {
@@ -189,7 +325,7 @@ func getContextAndVerb(operationID string, tag string) (context string, verb str
     case strings.HasPrefix(operationID, "post"):
       context = strings.TrimPrefix(operationID, "post")
       verb = "post"
-    case strings.HasPrefix(context, "upload"):
+    case strings.HasPrefix(operationID, "upload"):
       context = strings.TrimPrefix(operationID, "upload")
       verb = "post"
     case strings.HasPrefix(operationID, "update"):
@@ -229,3 +365,11 @@ func removeQuotes(quotedString string) (unquotedString string) {
   unquotedString = strings.TrimPrefix(quotedString, "\"")
   return strings.TrimSuffix(unquotedString, "\"")
 }
+
+func removeWhiteSpace(stringWithSpaces string) (stringWithoutSpaces string) {
+  stringWithoutSpaces = strings.Replace(stringWithSpaces, "\n", "", -1)
+  stringWithoutSpaces = strings.Replace(stringWithoutSpaces, "\r", "", -1)
+  stringWithoutSpaces = strings.Replace(stringWithoutSpaces, "\t", "", -1)
+  return stringWithoutSpaces
+}
+
