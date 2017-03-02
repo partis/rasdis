@@ -29,10 +29,25 @@ func toJson(template interface{}) string {
   return string(bytes)
 }
 
+func isJsonArray(s string) ([]map[string]interface{}, bool) {
+  var js []map[string]interface{}
+
+  err := json.Unmarshal([]byte(s), &js)
+  if err != nil {
+    glog.V(1).Info("Json is not valid: " + err.Error())
+  }
+
+  return js, err == nil 
+}
+  
+
 func isJson(s string) (map[string]interface{}, bool) {
   var js map[string]interface{}
 
   err := json.Unmarshal([]byte(s), &js)
+  if err != nil {
+    glog.V(1).Info("Json is not valid: " + err.Error())
+  }
   
   return js, err == nil
 }
@@ -244,17 +259,21 @@ func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
   jsonBytes = append(jsonBytes, comma...)
 
   //Parameters
-  jsonBytes = append(jsonBytes, []byte("\"parameters\":[")...)
+  jsonBytes = append(jsonBytes, []byte("\"parameters\":")...)
   parameters, err := json.Marshal(ver.Parameters)
   if err != nil {
     glog.Error(err)
   }
+
   parameters = bytes.Replace(parameters, []byte("\\\""), []byte("\""), -1)
   parameters = []byte(removeQuotes(string(parameters)))
-  jsonBytes = append(jsonBytes, parameters...)
 
-  jsonBytes = append(jsonBytes, []byte("]")...)
-
+  if string(parameters) == "" {
+    jsonBytes = append(jsonBytes, []byte("[]")...)
+  } else {
+    jsonBytes = append(jsonBytes, parameters...)
+  }
+  //jsonBytes = append(jsonBytes, []byte("]")...)
 
   jsonBytes = append(jsonBytes, []byte("}")...)
   glog.V(2).Info("json bytes for verb struct: %s", string(jsonBytes))

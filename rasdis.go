@@ -137,9 +137,12 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
 }
 
 func checkForDefinitions(projectName string, checkInHere string) {
-  for strings.Contains(checkInHere, "#/definition/") {
-    checkInHere = strings.SplitAfterN(checkInHere, "#/definition/", 2)[1]
+  if strings.Contains(checkInHere, "#/definitions/") {
+    checkInHere = strings.SplitAfterN(checkInHere, "#/definitions/", 2)[1]
+    checkForDefinitions(projectName, checkInHere)
     definitionName := strings.SplitAfterN(checkInHere, "\"", 2)[0]
+    definitionName = removeQuotes(definitionName)
+    glog.Info("Found a definition: #/definitions/" + definitionName)
     grabDefinitionDoc(projectName, definitionName)
   }
 }
@@ -147,17 +150,18 @@ func checkForDefinitions(projectName string, checkInHere string) {
 func grabDefinitionDoc(projectName string, definitionName string) {
   definition := new(Definition)
 
-  definitionDocument, docExists := getDocument(projectName, definitionName, "defintion", config)
+  definitionDocument, docExists := getDocument(projectName, definitionName, "definition", config)
 
-    glog.V(1).Info(docExists)
-    if docExists {
-      definition.Type = "object"
-      definition.Properties = definitionDocument
-      definition.Xml.Name = definitionName
-      template.Definitions.definitions = append(template.Definitions.definitions, *definition)
-    }
+  glog.V(1).Info("Definition document from forum is: " + definitionDocument)
+  glog.V(1).Info(docExists)
+  if docExists {
+    definition.Type = "object"
+    definition.Properties = definitionDocument
+    definition.Xml.Name = definitionName
+    template.Definitions.definitions = append(template.Definitions.definitions, *definition)
+  }
 
-    checkForDefinitions(definitionDocument, projectName)
+  checkForDefinitions(definitionDocument, projectName)
 }
 
 func rasdis(user string) string {

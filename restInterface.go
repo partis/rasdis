@@ -75,8 +75,6 @@ func getContentPolicyList(policyType string, config Config) policyList {
 
   resp := callRest(url, config)
 
-  glog.V(2).Info(resp)
-
   json.Unmarshal(resp, &policy)
 
   glog.V(1).Info("Name: ", policy.Policy[0].Name)
@@ -92,8 +90,6 @@ func getContentPolicy(policyName string, policyType string, config Config) conte
 
   resp := callRest(url, config)
 
-  glog.V(2).Info(resp)
-
   json.Unmarshal(resp, &policy)
 
   return policy
@@ -106,8 +102,6 @@ func getVirtualDirectoryList(policyName string, policyType string, config Config
 
   resp := callRest(url, config)
 
-  glog.V(2).Info(resp)
-
   json.Unmarshal(resp, &policy)
 
   return policy
@@ -119,8 +113,6 @@ func getVirtualDirectory(policyName string, virtualDirectoryName string, policyT
   url := "/restApi/v1.0/policies/" + policyType + "Policies/" + policyName + "/virtualDirectories/" + virtualDirectoryName
 
   resp := callRest(url, config)
-
-  glog.V(2).Info(resp)
 
   json.Unmarshal(resp, &policy)
 
@@ -168,6 +160,7 @@ func getDocument(projectDetails string, description string, docType string, conf
     Document = (inter.(map[string]interface{}))["document"].(string)
 
     Document = removeQuotes(Document)
+    Document = removeWhiteSpace(Document)
 
     if docType == "parameters" {
       Document = "[" + Document + "]"
@@ -175,25 +168,14 @@ func getDocument(projectDetails string, description string, docType string, conf
 
     glog.V(2).Info("Document retrieved from forum is: " + Document)
 
-    if jsonDoc, ok := isJson(Document); ok {
-      //var jsonDoc map[string]interface{}
-      //err = json.Unmarshal([]byte(Document), &jsonDoc)
-      //if err != nil {
-      //  log.Fatal(err)
-      //}
-
+    if jsonDoc, ok := isJsonArray(Document); ok {
       glog.V(2).Info(jsonDoc)
-      i := 0
 
-      keys := make([]string, len(jsonDoc))
-      for s, _ := range jsonDoc {
-        keys[i] = s
-        i++
+      if Document == "[]" {
+        return "", false
+      } else {
+        return Document, docExists
       }
-    
-      glog.V(2).Info(Document)
-     
-      return Document, docExists
     } else {
       glog.Warning("Your document isn't valid JSON, please check and upload valid JSON to create your model definition")
     }
