@@ -39,9 +39,8 @@ func isJsonArray(s string) ([]map[string]interface{}, bool) {
 
   return js, err == nil 
 }
-  
 
-func isJson(s string) (map[string]interface{}, bool) {
+/**func isJson(s string) (map[string]interface{}, bool) {
   var js map[string]interface{}
 
   err := json.Unmarshal([]byte(s), &js)
@@ -50,14 +49,28 @@ func isJson(s string) (map[string]interface{}, bool) {
   }
   
   return js, err == nil
+}**/
+
+func isJson(s string) bool {
+  var js interface{}
+
+  err := json.Unmarshal([]byte(s), &js)
+  if err != nil {
+    glog.V(1).Info("Json is not valid: " + err.Error())
+  }
+
+  return err == nil
 }
 
 func (def *DefinitionStruct) MarshalJSON() ([]byte, error) {
-  var jsonBytes []byte = []byte("")
+  var jsonBytes []byte = []byte("{")
+  comma := []byte(",")
   
   for i := range def.definitions {
     
     properties := def.definitions[i].Properties
+
+    
     //strip the escape characters from properties
     //properties = strings.Replace(properties, "\\", "", -1)
 
@@ -72,10 +85,16 @@ func (def *DefinitionStruct) MarshalJSON() ([]byte, error) {
     glog.Info("Properties are: " + properties)
     //properties = strings.Replace(properties, "\"properties\": {", string(def.definition[i]Type) + "," +  "\"properties\": {", 1)
 
+    properties = strings.TrimPrefix(properties, "{")
     jsonBytes = append(jsonBytes, []byte(properties)...)
+    jsonBytes = bytes.TrimSuffix(jsonBytes, []byte("}"))
+    jsonBytes = append(jsonBytes, comma...)
   }
 
-  glog.V(2).Info("json from definiaton structs is " +  string(jsonBytes))
+  jsonBytes = bytes.TrimSuffix(jsonBytes, comma)
+  jsonBytes = append(jsonBytes, []byte("}")...)
+
+  glog.V(2).Info("json from definiton structs is " +  string(jsonBytes))
 
   if string(jsonBytes) == "" {
     jsonBytes = []byte("{}")

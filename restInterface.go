@@ -126,8 +126,6 @@ func getListenerPolicy(listenerType string, listenerName string, config Config) 
 
   resp := callRest(url, config)
 
-  glog.V(2).Info(resp)
-
   err := json.Unmarshal(resp, &policy)
   if err != nil {
     log.Fatal(err)
@@ -168,9 +166,7 @@ func getDocument(projectDetails string, description string, docType string, conf
 
     glog.V(2).Info("Document retrieved from forum is: " + Document)
 
-    if jsonDoc, ok := isJsonArray(Document); ok {
-      glog.V(2).Info(jsonDoc)
-
+    if ok := isJson(Document); ok {
       if Document == "[]" {
         return "", false
       } else {

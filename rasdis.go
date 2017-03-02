@@ -158,10 +158,20 @@ func grabDefinitionDoc(projectName string, definitionName string) {
     definition.Type = "object"
     definition.Properties = definitionDocument
     definition.Xml.Name = definitionName
-    template.Definitions.definitions = append(template.Definitions.definitions, *definition)
-  }
 
-  checkForDefinitions(definitionDocument, projectName)
+    alreadyExists := false
+    for _,def := range template.Definitions.definitions {
+      if def == *definition {
+        alreadyExists = true
+      }
+    }
+
+    if !alreadyExists {
+      template.Definitions.definitions = append(template.Definitions.definitions, *definition)
+    }
+
+    checkForDefinitions(projectName, definitionDocument)
+  }
 }
 
 func rasdis(user string) string {
