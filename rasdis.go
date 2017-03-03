@@ -63,7 +63,6 @@ func dealWithVirtualDirectoryList(contentPolicy *contentPolicy, virtualDirectory
 func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *virtualDirectory, policyType string) {
   path := new(PathStruct)
   verb := new(VerbStruct)
- // definition := new(Definition)
   
   listenerType := getNetworkProtocol(virtualDirectory.ListenerPolicy)
   listenerPolicy := getListenerPolicy(listenerType, virtualDirectory.ListenerPolicy, config)
@@ -73,34 +72,14 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
   parameterDocument, parameterDocExists := getDocument(virtualDirectorySplit[0], virtualDirectorySplit[1], "parameters", config)
 
   if parameterDocExists {
-   glog.V(1).Info("Parameter doc is: " + parameterDocument)
-   verb.Parameters = parameterDocument 
+    glog.V(1).Info("Parameter doc is: " + parameterDocument)
+    verb.Parameters = parameterDocument 
 
-   checkForDefinitions(virtualDirectorySplit[0], parameterDocument)
-  //grab any documents for this parameter
-  //document, parameterName, docExists := getDocument(virtualDirectorySplit[0], virtualDirectorySplit[1], config)
-
-    //glog.V(1).Info(docExists)
-    //if docExists {
-     // definition.Type = "object"
-      //definition.Properties = document
-      //definition.Xml.Name = contentPolicySplit[1]
-      //template.Definitions.definitions = append(template.Definitions.definitions, *definition)
-
-      //parameters := new(VerbParameters)
-
-      //parameters.In = "body"
-      //parameters.Name = parameterName
-      //parameters.Description = ""
-
-      //parameters.Required = false
-      //parameters.Schema.Ref = "#/definitions/" + parameterName 
-
-      //verb.Parameters = append(verb.Parameters, * parameters)
-    } 
+    checkForDefinitions(virtualDirectorySplit[0], parameterDocument)
+  } 
     
     verb.Tags = append(verb.Tags, contentPolicySplit[1])
-    verb.Summary, verb.OperationID = processVirtualDirectory(virtualDirectory.VirtualPath, (strings.Split(contentPolicy.Name, "_policy_")[1]), virtualDirectory.Description)
+    verb.Summary, verb.OperationID = processVirtualDirectory(virtualDirectorySplit[1], virtualDirectory.VirtualPath, contentPolicySplit[1], virtualDirectory.Description)
 
   if verb.Summary != "" && verb.OperationID != "" {
     verb.Description = virtualDirectory.Description
@@ -115,12 +94,7 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
       verb.Produces = []string{"application/xml"}
     }
    
-    //listenerPort,err := json.Marshal(listenerPolicy["port"])
     listenerPort := listenerPolicy["port"]
-    //if err != nil {
-    //  glog.Warning("Unable to parse port from listener policy setting to 80")
-    //  listenerPort = []byte("80")
-    //}
     fmt.Println("Port from listenerPolicy is : " + string(listenerPort))
     port, err := strconv.Atoi(removeQuotes(string(listenerPort)))
     if err != nil {
@@ -224,7 +198,7 @@ func getVerbs(requestFilter string) []string {
   return verbs
 }
 
-func processVirtualDirectory(virtualPath string, tag string, virtualDescription string) (summary string, operationId string)  {
+func processVirtualDirectory(virtualName string, virtualPath string, tag string, virtualDescription string) (summary string, operationId string)  {
 
   var context string
   if strings.HasPrefix(virtualPath, "/" + tag + "/") {
@@ -258,8 +232,31 @@ func processVirtualDirectory(virtualPath string, tag string, virtualDescription 
       }
       summary = "Finds " + tag + " by " + by
     default:
-      glog.Warningf("The virtual path %s doesn't contain a currently supported action", virtualPath)
-      return "", ""
+      glog.Warningf("The virtual path %s doesn't contain a currently supported action. Trying to get the info from the virtual directory name.", virtualPath)
+      switch true {
+      case strings.HasPrefix(strings.ToLower(virtualName), "add"):
+        operationId = "add" + strings.Title(tag)
+        summary = "Add a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "post"):
+        operationId = "post" + strings.Title(tag)
+        summary = "Post a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "upload"):
+        operationId = "upload" + strings.Title(tag)
+        summary = "Upload a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "update"):
+        operationId = "update" + strings.Title(tag)
+        summary = "Update an existing " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "get"):
+        operationId = "get" + strings.Title(tag)
+        summary = "Get " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "find"):
+        by := strings.Split(virtualDescription, "by")
+        operationId = "find" + strings.Title(tag) + "By" + by[1]
+        summary = "Finds " + tag + " by " + by[1]
+      default:
+        glog.Warningf("Please add supported action to virtual directories name, description or virtual path")
+        return "", ""
+      }
     }
   } else {
     switch true {
@@ -283,8 +280,31 @@ func processVirtualDirectory(virtualPath string, tag string, virtualDescription 
       operationId = "find" + strings.Title(tag) + "By" + by[1]
       summary = "Finds " + tag + " by " + by[1]
     default:
-      glog.Warningf("Unable to determine action from description of virtual directory with virtual path of %s. Please add supported action to virtual directories description or virtual path", virtualPath)
-      return "", ""
+      glog.Warningf("Unable to determine action from description of virtual directory with virtual path of %s. Trying to get the info from the virtual directory name.", virtualPath)
+      switch true {
+      case strings.HasPrefix(strings.ToLower(virtualName), "add"):
+        operationId = "add" + strings.Title(tag)
+        summary = "Add a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "post"):
+        operationId = "post" + strings.Title(tag)
+        summary = "Post a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "upload"):
+        operationId = "upload" + strings.Title(tag)
+        summary = "Upload a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "update"):
+        operationId = "update" + strings.Title(tag)
+        summary = "Update an existing " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "get"):
+        operationId = "get" + strings.Title(tag)
+        summary = "Get " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "find"):
+        by := strings.Split(virtualDescription, "by")
+        operationId = "find" + strings.Title(tag) + "By" + by[1]
+        summary = "Finds " + tag + " by " + by[1]
+      default:
+        glog.Warningf("Please add supported action to virtual directories name, description or virtual path")
+        return "", ""
+      }
     }
   }
   return summary, operationId

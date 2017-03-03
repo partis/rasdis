@@ -69,6 +69,7 @@ func serveSwaggerJson(fn http.HandlerFunc, contextMap map[string]string) http.Ha
     fmt.Println("Entry is: " + contextMap["\"" + strings.Split(path, "/")[2] + "\""])
  
     if swaggerJson, ok := contextMap[strings.Split(path, "/")[2]]; ok {
+      w.Header().Set("Content-Type", "application/json")
       fmt.Fprintf(w, swaggerJson)    
       //http.Redirect(w, r, "http://" + r.Host + "/?url=http://" + r.Host + r.URL.Path, 302)
     } else {
