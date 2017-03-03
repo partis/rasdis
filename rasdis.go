@@ -231,6 +231,9 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
         by = (strings.Split(context, "by"))[1]
       }
       summary = "Finds " + tag + " by " + by
+    case strings.HasPrefix(context, "delete"):
+      operationId = strings.Replace(context, "delete", "delete" + strings.Title(tag), 1)
+      summary = "Delete a " + tag
     default:
       glog.Warningf("The virtual path %s doesn't contain a currently supported action. Trying to get the info from the virtual directory name.", virtualPath)
       switch true {
@@ -253,6 +256,9 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
         by := strings.Split(virtualDescription, "by")
         operationId = "find" + strings.Title(tag) + "By" + by[1]
         summary = "Finds " + tag + " by " + by[1]
+      case strings.HasPrefix(strings.ToLower(virtualName), "delete"):
+        operationId = "delete" + strings.Title(tag)
+        summary = "Delete a " + tag
       default:
         glog.Warningf("Please add supported action to virtual directories name, description or virtual path")
         return "", ""
@@ -279,6 +285,9 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
       by := strings.Split(virtualDescription, "by")
       operationId = "find" + strings.Title(tag) + "By" + by[1]
       summary = "Finds " + tag + " by " + by[1]
+    case strings.HasPrefix(strings.ToLower(virtualDescription), "delete"):
+      operationId = "delete" + strings.Title(tag)
+      summary = "Delete a " + tag
     default:
       glog.Warningf("Unable to determine action from description of virtual directory with virtual path of %s. Trying to get the info from the virtual directory name.", virtualPath)
       switch true {
@@ -301,6 +310,9 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
         by := strings.Split(virtualDescription, "by")
         operationId = "find" + strings.Title(tag) + "By" + by[1]
         summary = "Finds " + tag + " by " + by[1]
+      case strings.HasPrefix(strings.ToLower(virtualName), "delete"):
+        operationId = "delete" + strings.Title(tag)
+        summary = "Delete a " + tag
       default:
         glog.Warningf("Please add supported action to virtual directories name, description or virtual path")
         return "", ""
@@ -330,6 +342,8 @@ func getVerb(virtualPath string, tag string, virtualDescription string) (verb st
       verb = "get"
     case strings.HasPrefix(context, "find"):
       verb = "get"
+    case strings.HasPrefix(context, "delete"):
+      verb = "delete"
     }
   } else {
     switch true {
@@ -345,6 +359,8 @@ func getVerb(virtualPath string, tag string, virtualDescription string) (verb st
       verb = "get"
     case strings.HasPrefix(strings.ToLower(virtualDescription), "find"):
       verb = "get"
+    case strings.HasPrefix(strings.ToLower(virtualDescription), "delete"):
+      verb = "delete"
     }
   }
   return verb

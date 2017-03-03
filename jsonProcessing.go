@@ -375,6 +375,9 @@ func getContextAndVerb(operationID string, tag string) (context string, verb str
     case strings.HasPrefix(operationID, "find"):
       context = operationID
       verb = "get"
+    case strings.HasPrefix(operationID, "delete"):
+      context = strings.TrimPrefix(operationID, "delete")
+      verb = "delete"
     }
     glog.V(1).Info("Verb is : " + verb)
     glog.V(1).Info("Tag is : " + tag)
