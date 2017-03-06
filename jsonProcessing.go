@@ -40,7 +40,7 @@ func isJsonArray(s string) ([]map[string]interface{}, bool) {
   return js, err == nil 
 }
 
-/**func isJson(s string) (map[string]interface{}, bool) {
+func jsonStringToMap(s string) map[string]interface{} {
   var js map[string]interface{}
 
   err := json.Unmarshal([]byte(s), &js)
@@ -48,8 +48,8 @@ func isJsonArray(s string) ([]map[string]interface{}, bool) {
     glog.V(1).Info("Json is not valid: " + err.Error())
   }
   
-  return js, err == nil
-}**/
+  return js
+}
 
 func isJson(s string) bool {
   var js interface{}

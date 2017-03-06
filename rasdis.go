@@ -71,11 +71,16 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
   virtualDirectorySplit := strings.Split(virtualDirectory.Name, "_virtual_directory_") 
   parameterDocument, parameterDocExists := getDocument(virtualDirectorySplit[0], virtualDirectorySplit[1], "parameters", config)
 
+  var pathVariables []string
   if parameterDocExists {
     glog.V(1).Info("Parameter doc is: " + parameterDocument)
     verb.Parameters = parameterDocument 
 
     checkForDefinitions(virtualDirectorySplit[0], parameterDocument)
+    pathVariables = checkForPathVariables(parameterDocument)
+    for _,path := range pathVariables {
+      virtualDirectory.VirtualPath = virtualDirectory.VirtualPath + "/{" + path + "}"
+    }
   } 
     
     verb.Tags = append(verb.Tags, contentPolicySplit[1])
@@ -108,6 +113,22 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
   
     template.Paths.paths = append(template.Paths.paths, *path)
   }
+}
+
+func checkForPathVariables(parameterDocument string) (pathVariables []string) {
+  if strings.Contains(parameterDocument, "\"in\": \"path\"") {
+    pathVariables = make([]string, 1)
+    if jsonDoc, ok := isJsonArray(parameterDocument); ok {
+      for _,jsonEntry := range jsonDoc {
+        if jsonEntry["in"] == "path" {
+          glog.Info("Adding path variable: " + jsonEntry["name"].(string))
+          pathVariables = append(pathVariables, jsonEntry["name"].(string))
+        }
+      }
+    }
+    return pathVariables
+  }
+  return nil
 }
 
 func checkForDefinitions(projectName string, checkInHere string) {
