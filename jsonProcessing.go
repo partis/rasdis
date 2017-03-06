@@ -378,6 +378,20 @@ func getContextAndVerb(operationID string, tag string) (context string, verb str
     case strings.HasPrefix(operationID, "delete"):
       context = strings.TrimPrefix(operationID, "delete")
       verb = "delete"
+    case strings.HasPrefix(strings.ToLower(operationID), "create" + tag + "with"):
+      context = operationID
+      if strings.HasSuffix(context, "input") {
+        context = strings.TrimSuffix(context, "input")
+      }
+      
+      if strings.HasSuffix(context, "Input") {
+        context = strings.TrimSuffix(context, "Input")
+      }
+        
+      verb = "post"
+    case strings.HasPrefix(operationID, "create"):
+      context = strings.TrimPrefix(operationID, "create")
+      verb = "post"
     }
     glog.V(1).Info("Verb is : " + verb)
     glog.V(1).Info("Tag is : " + tag)
@@ -386,6 +400,10 @@ func getContextAndVerb(operationID string, tag string) (context string, verb str
     glog.V(1).Info("Context is : " + context)
     if context != "" {
       context = "/" + context
+    }
+
+    if strings.Contains(context, "//") {
+      context = strings.Replace(context, "//", "/", -1)
     }
 
   return context, verb  

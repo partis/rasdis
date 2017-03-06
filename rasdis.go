@@ -79,6 +79,9 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
     checkForDefinitions(virtualDirectorySplit[0], parameterDocument)
     pathVariables = checkForPathVariables(parameterDocument)
     for _,path := range pathVariables {
+      glog.V(1).Info("Path variable is: " + path)
+      glog.V(1).Info("Virtual Path is: " + virtualDirectory.VirtualPath)
+      path = removeQuotes(path)
       if strings.HasSuffix(virtualDirectory.VirtualPath, "/") {
         virtualDirectory.VirtualPath = virtualDirectory.VirtualPath + "{" + path + "}"
       } else {
@@ -259,6 +262,9 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
     case strings.HasPrefix(context, "delete"):
       operationId = strings.Replace(context, "delete", "delete" + strings.Title(tag), 1)
       summary = "Delete a " + tag
+    case strings.HasPrefix(context, "create"):
+      operationId = strings.Replace(context, "create", "create" + strings.Title(tag), 1)
+      summary = "Create a " + tag
     default:
       glog.Warningf("The virtual path %s doesn't contain a currently supported action. Trying to get the info from the virtual directory name.", virtualPath)
       switch true {
@@ -284,9 +290,18 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
       case strings.HasPrefix(strings.ToLower(virtualName), "delete"):
         operationId = "delete" + strings.Title(tag)
         summary = "Delete a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "create"):
+        operationId = "create" + strings.Title(tag)
+        summary = "Create a " + tag
       default:
-        glog.Warningf("Please add supported action to virtual directories name, description or virtual path")
-        return "", ""
+        glog.Warningf("Please add supported action to virtual directories name, description or virtual path. Setting as default")
+        if strings.Contains(context, "by") {
+          operationId = "get" + tag + context
+          summary = "get user by name"
+        } else {
+          operationId = context
+          summary = context
+        }
       }
     }
   } else {
@@ -313,6 +328,9 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
     case strings.HasPrefix(strings.ToLower(virtualDescription), "delete"):
       operationId = "delete" + strings.Title(tag)
       summary = "Delete a " + tag
+    case strings.HasPrefix(strings.ToLower(virtualDescription), "create"):
+      operationId = "create" + strings.Title(tag)
+      summary = "Create a " + tag
     default:
       glog.Warningf("Unable to determine action from description of virtual directory with virtual path of %s. Trying to get the info from the virtual directory name.", virtualPath)
       switch true {
@@ -338,9 +356,18 @@ func processVirtualDirectory(virtualName string, virtualPath string, tag string,
       case strings.HasPrefix(strings.ToLower(virtualName), "delete"):
         operationId = "delete" + strings.Title(tag)
         summary = "Delete a " + tag
+      case strings.HasPrefix(strings.ToLower(virtualName), "create"):
+        operationId = "create" + strings.Title(tag)
+        summary = "Create a " + tag
       default:
-        glog.Warningf("Please add supported action to virtual directories name, description or virtual path")
-        return "", ""
+        glog.Warningf("Please add supported action to virtual directories name, description or virtual path. Setting as default")
+        if strings.Contains(context, "by") {
+          operationId = "get" + tag + context
+          summary = "get user by name"
+        } else {
+          operationId = context
+          summary = context
+        }
       }
     }
   }
@@ -369,6 +396,8 @@ func getVerb(virtualPath string, tag string, virtualDescription string) (verb st
       verb = "get"
     case strings.HasPrefix(context, "delete"):
       verb = "delete"
+    case strings.HasPrefix(context, "create"):
+      verb = "create"
     }
   } else {
     switch true {
@@ -386,6 +415,8 @@ func getVerb(virtualPath string, tag string, virtualDescription string) (verb st
       verb = "get"
     case strings.HasPrefix(strings.ToLower(virtualDescription), "delete"):
       verb = "delete"
+    case strings.HasPrefix(strings.ToLower(virtualDescription), "create"):
+      verb = "create"
     }
   }
   return verb
