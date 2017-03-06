@@ -193,7 +193,7 @@ func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
   jsonBytes = append(jsonBytes, consumes...)
   jsonBytes = append(jsonBytes, []byte(",\"produces\":")...)
   jsonBytes = append(jsonBytes, produces...)
-  jsonBytes = append(jsonBytes, []byte(",\"connection\":")...)
+  jsonBytes = append(jsonBytes, []byte(",\"x-connection\":")...)
   jsonBytes = append(jsonBytes, connection...)
   jsonBytes = append(jsonBytes, []byte(",\"parameters\":[")...)
   if string(parameters) != "" {
@@ -273,7 +273,7 @@ func (ver *VerbStruct) MarshalJSON() ([]byte, error) {
   if err != nil {
     glog.Error(err)
   }
-  jsonBytes = append(jsonBytes, []byte("\"connection\":")...)
+  jsonBytes = append(jsonBytes, []byte("\"x-connection\":")...)
   jsonBytes = append(jsonBytes, connection...)
   jsonBytes = append(jsonBytes, comma...)
 
@@ -328,7 +328,7 @@ func (ver *VerbStruct) UnmarshalJSON(b []byte) (err error) {
   ver.Produces = produces
 
   var conn ConnectionStruct
-  json.Unmarshal(verb["connection"], &conn)
+  json.Unmarshal(verb["x-connection"], &conn)
 
   ver.Connection = conn
 

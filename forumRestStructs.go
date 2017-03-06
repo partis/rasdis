@@ -61,15 +61,13 @@ type VerbStruct struct {
   OperationID string `json:"operationId"`
   Consumes []string `json:"consumes"`
   Produces []string `json:"produces"`
-  //Port string `json:"port"`
-  Connection ConnectionStruct `json:"connection"`
-  //Parameters []VerbParameters `json:"parameters"`
+  Connection ConnectionStruct `json:"x-connection"`
   Parameters string `json:"parameters"`
 }
 
 type ConnectionStruct struct {
-  Port int `json:"port"`
-  Type string `json:"type"`
+  Port int `json:"x-port"`
+  Type string `json:"x-type"`
 }
 
 type VerbParameters struct {
