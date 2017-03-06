@@ -79,7 +79,11 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
     checkForDefinitions(virtualDirectorySplit[0], parameterDocument)
     pathVariables = checkForPathVariables(parameterDocument)
     for _,path := range pathVariables {
-      virtualDirectory.VirtualPath = virtualDirectory.VirtualPath + "/{" + path + "}"
+      if strings.HasSuffix(virtualDirectory.VirtualPath, "/") {
+        virtualDirectory.VirtualPath = virtualDirectory.VirtualPath + "{" + path + "}"
+      } else {
+        virtualDirectory.VirtualPath = virtualDirectory.VirtualPath + "/{" + path + "}"
+      }
     }
   } 
     
@@ -117,7 +121,7 @@ func dealWithVirtualDirectory(contentPolicy *contentPolicy, virtualDirectory *vi
 
 func checkForPathVariables(parameterDocument string) (pathVariables []string) {
   if strings.Contains(parameterDocument, "\"in\": \"path\"") {
-    pathVariables = make([]string, 1)
+    pathVariables = make([]string, 0)
     if jsonDoc, ok := isJsonArray(parameterDocument); ok {
       for _,jsonEntry := range jsonDoc {
         if jsonEntry["in"] == "path" {
